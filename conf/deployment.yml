@@ -1,0 +1,88 @@
+# conf/deployment.yml
+# -----------------------------------------------------------------------------
+# dbx deployment configuration (YAML)
+# - Keeps a reusable cluster block via YAML anchors.
+# - Disables packaging/build (no wheel) to avoid pip build errors.
+# - Ships/executes your code directly from the repo via file:// path.
+# -----------------------------------------------------------------------------
+
+# Reusable bits (anchors) for clusters you can reference across jobs
+custom:
+  basic-cluster-props: &basic-cluster-props
+    # Databricks Runtime version. You can change later (e.g., "14.3.x-scala2.12")
+    spark_version: "11.3.x-cpu-ml-scala2.12"
+
+  basic-static-cluster: &basic-static-cluster
+    new_cluster:
+      <<: *basic-cluster-props
+      num_workers: 1
+      node_type_id: "Standard_E8_v3"
+
+# Turn OFF Python package build (wheel). We’ll run files directly from the repo.
+build:
+  no_build: true
+
+environments:
+  default:
+
+    # If you want to keep the sample workflows, leave them here (optional).
+    # You can remove or comment these out later to keep the file tidy.
+    workflows:
+      # ------------------------- YOUR WORKFLOW -------------------------------
+      - name: factory_hourly_refresh
+        tasks:
+          - task_key: main
+            <<: *basic-static-cluster
+
+            # Don’t attach a wheel/package; run directly from the repo.
+            deployment_config:
+              no_package: true
+
+            # Run your Python file from source.
+            spark_python_task:
+              python_file: "file://src/jobs/factory_hourly_refresh/factory_hourly_refresh.py"
+
+      # ------------------------- (OPTIONAL) EXAMPLES -------------------------
+      # - name: cicd-sample-project-sample-tests
+      #   tasks:
+      #     - task_key: main
+      #       <<: *basic-static-cluster
+      #       spark_python_task:
+      #         python_file: "file://tests/entrypoint.py"
+      #         parameters: ["file:fuse://tests/integration", "--cov=cicd_sample_project"]
+
+      # - name: cicd-sample-project-sample-etl
+      #   tasks:
+      #     - task_key: main
+      #       <<: *basic-static-cluster
+      #       python_wheel_task:
+      #         package_name: "cicd_sample_project"
+      #         entry_point: "etl"
+      #         parameters: ["--conf-file", "file:fuse://conf/tasks/sample_etl_config.yml"]
+
+      # - name: cicd-sample-project-sample-multitask
+      #   job_clusters:
+      #     - job_cluster_key: default
+      #       <<: *basic-static-cluster
+      #   tasks:
+      #     - task_key: etl
+      #       job_cluster_key: default
+      #       spark_python_task:
+      #         python_file: "file://cicd_sample_project/tasks/sample_etl_task.py"
+      #         parameters: [ "--conf-file", "file:fuse://conf/tasks/sample_etl_config.yml" ]
+      #     - task_key: ml
+      #       depends_on:
+      #         - task_key: etl
+      #       job_cluster_key: default
+      #       python_wheel_task:
+      #         package_name: "cicd_sample_project"
+      #         entry_point: "ml"
+      #         parameters: [ "--conf-file", "file:fuse://conf/tasks/sample_ml_config.yml" ]
+      #     - task_key: notebook
+      #       deployment_config:
+      #         no_package: true
+      #       depends_on:
+      #         - task_key: ml
+      #       job_cluster_key: default
+      #       notebook_task:
+      #         notebook_path: "/Repos/Staging/cicd_sample_project/notebooks/sample_notebook"
