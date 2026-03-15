@@ -1,0 +1,57 @@
+name: Copy code to Databricks Workspace
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    env:
+      # What to upload (you can change to '.' or 'src/jobs' etc.)
+      LOCAL_DIR: src
+      # Where in Workspace to put it (no secret needed)
+      WORKSPACE_PATH: /Users/ayush.dadoo.ext@hitachirail.net/factory_iq_iot
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Databricks CLI (legacy)
+        run: |
+          python -m pip install --upgrade pip
+          pip install "databricks-cli<0.18"
+
+      - name: Configure Databricks CLI profile (from existing secrets)
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          printf "[DEFAULT]\nhost = %s\ntoken = %s\n" "$DATABRICKS_HOST" "$DATABRICKS_TOKEN" > ~/.databrickscfg
+          chmod 600 ~/.databrickscfg
+
+      - name: Ensure target folder exists in Workspace
+        run: |
+          databricks workspace mkdirs "$WORKSPACE_PATH"
+
+      - name: Upload source tree to Workspace
+        run: |
+          # Imports .py files as source-backed notebooks in Workspace
+          databricks workspace import_dir \
+            --overwrite \
+            --format AUTO \
+            --language PYTHON \
+            "$LOCAL_DIR" "$WORKSPACE_PATH"
+
+      - name: List uploaded path (verify)
+        run: |
+          echo "Contents of $WORKSPACE_PATH:"
+          databricks workspace list "$WORKSPACE_PATH" || true
