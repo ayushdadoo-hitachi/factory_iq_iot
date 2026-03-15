@@ -1,0 +1,56 @@
+name: dbx deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbx and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "databricks-cli<0.18" "dbx==0.8.19"
+          pip install "click==8.1.7" "typer==0.7.0" "rich==12.6.0"
+
+      - name: Configure Databricks CLI profile (printf)
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          set -e
+          rm -rf ~/.databrickscfg
+          printf "[DEFAULT]\nhost = %s\ntoken = %s\n" "$DATABRICKS_HOST" "$DATABRICKS_TOKEN" > ~/.databrickscfg
+          echo "Wrote ~/.databrickscfg:"
+          ls -la ~
+          echo "----"
+          sed -e 's/\(token = \).*/\1*** (hidden)/' ~/.databrickscfg
+
+      - name: Use legacy CLI (required for dbx)
+        run: echo "DATABRICKS_CLI_DO_NOT_EXECUTE_NEWER_VERSION=1" >> $GITHUB_ENV
+
+      - name: Verify CLI and profile
+        run: |
+          python -c "import sys; print('Python:', sys.version)"
+          databricks --version || true
+          dbx --version
+
+      - name: Deploy workflow(s)
+        run: dbx deploy --environment default
+
+      - name: Launch workflow (optional)
+        run: dbx launch --environment default --job factory_hourly_refresh

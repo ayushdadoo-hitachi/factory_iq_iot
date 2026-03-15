@@ -9,9 +9,9 @@ jobs:
   copy:
     runs-on: ubuntu-latest
     env:
-      # What to upload (you can change to '.' or 'src/jobs' etc.)
+      # What to upload (change to '.' or 'src/jobs' if you prefer)
       LOCAL_DIR: src
-      # Where in Workspace to put it (no secret needed)
+      # Where in Workspace to put it (plain env var, not a secret)
       WORKSPACE_PATH: /Users/ayush.dadoo.ext@hitachirail.net/factory_iq_iot
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
@@ -44,12 +44,8 @@ jobs:
 
       - name: Upload source tree to Workspace
         run: |
-          # Imports .py files as source-backed notebooks in Workspace
-          databricks workspace import_dir \
-            --overwrite \
-            --format AUTO \
-            --language PYTHON \
-            "$LOCAL_DIR" "$WORKSPACE_PATH"
+          # Note: --format/--language are NOT supported on import_dir in CLI v0.17.x
+          databricks workspace import_dir --overwrite "$LOCAL_DIR" "$WORKSPACE_PATH"
 
       - name: List uploaded path (verify)
         run: |
