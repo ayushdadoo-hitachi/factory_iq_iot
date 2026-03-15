@@ -27,12 +27,15 @@ jobs:
       - name: Configure Databricks CLI profile
         shell: bash
         run: |
-          mkdir -p ~/.databrickscfg
-          cat > ~/.databrickscfg << 'EOF'
-          [DEFAULT]
-          host = $DATABRICKS_HOST
-          token = $DATABRICKS_TOKEN
-          EOF
+          # Remove existing file or folder if present
+          rm -rf ~/.databrickscfg
+
+          # Create a new FILE (not a folder)
+          cat << 'EOF' > ~/.databrickscfg
+[DEFAULT]
+host = $DATABRICKS_HOST
+token = $DATABRICKS_TOKEN
+EOF
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
