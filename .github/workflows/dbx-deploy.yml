@@ -7,7 +7,10 @@ on:
 
 jobs:
   deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
 
     steps:
       - name: Checkout code
@@ -24,9 +27,7 @@ jobs:
           pip install "databricks-cli<0.18" "dbx==0.8.19"
           pip install "click==8.1.7" "typer==0.7.0" "rich==12.6.0"
 
-      # Write ~/.databrickscfg as a FILE (not a folder)
       - name: Configure Databricks CLI profile (printf)
-        shell: bash
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
@@ -40,11 +41,9 @@ jobs:
           sed -e 's/\(token = \).*/\1*** (hidden)/' ~/.databrickscfg
 
       - name: Use legacy CLI (required for dbx)
-        shell: bash
         run: echo "DATABRICKS_CLI_DO_NOT_EXECUTE_NEWER_VERSION=1" >> $GITHUB_ENV
 
       - name: Verify CLI and profile
-        shell: bash
         run: |
           python -c "import sys; print('Python:', sys.version)"
           databricks --version || true
