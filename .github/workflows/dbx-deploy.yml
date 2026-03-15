@@ -24,25 +24,31 @@ jobs:
           pip install "databricks-cli<0.18" "dbx==0.8.19"
           pip install "click==8.1.7" "typer==0.7.0" "rich==12.6.0"
 
-      - name: Configure Databricks CLI profile
+      # Write ~/.databrickscfg as a FILE (not a folder)
+      - name: Configure Databricks CLI profile (printf)
         shell: bash
-        run: |
-          # Remove existing file or folder if present
-          rm -rf ~/.databrickscfg
-
-          # Create a new FILE (not a folder)
-          cat << 'EOF' > ~/.databrickscfg
-[DEFAULT]
-host = $DATABRICKS_HOST
-token = $DATABRICKS_TOKEN
-EOF
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          set -e
+          rm -rf ~/.databrickscfg
+          printf "[DEFAULT]\nhost = %s\ntoken = %s\n" "$DATABRICKS_HOST" "$DATABRICKS_TOKEN" > ~/.databrickscfg
+          echo "Wrote ~/.databrickscfg:"
+          ls -la ~
+          echo "----"
+          sed -e 's/\(token = \).*/\1*** (hidden)/' ~/.databrickscfg
 
       - name: Use legacy CLI (required for dbx)
         shell: bash
         run: echo "DATABRICKS_CLI_DO_NOT_EXECUTE_NEWER_VERSION=1" >> $GITHUB_ENV
+
+      - name: Verify CLI and profile
+        shell: bash
+        run: |
+          python -c "import sys; print('Python:', sys.version)"
+          databricks --version || true
+          dbx --version
 
       - name: Deploy workflow(s)
         run: dbx deploy --environment default
