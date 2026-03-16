@@ -1,7 +1,12 @@
+
+
+
 CSV_ACCOUNT     = "sarawrobotcsvfiles"
 CSV_CONTAINER   = "csv-files-from-welding-robot"
 
-ACCOUNT     = "stfactoryiqdevadls"
+# ACCOUNT     = "stfactoryiqdevadls"
+ACCOUNT       = dbutils.secrets.get("factoryiq-secrets", "ACCOUNT")
+
 CONTAINER   = "welding-data"
 
 TABLE_ROOT  = "lake"   

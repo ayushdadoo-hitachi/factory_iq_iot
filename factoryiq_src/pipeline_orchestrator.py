@@ -133,6 +133,7 @@ def run_pipeline(blob_url: Optional[str] = None) -> None:
         weld_features_path=config_paths.weld_features_path,
     )
     logger.info("Reference tables loaded.")
+    logger.info(f"ACCOUNT = {config_paths.ACCOUNT}")
 
     # -----------------
     # Bronze Ingestion
