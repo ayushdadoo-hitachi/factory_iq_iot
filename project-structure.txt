@@ -1,0 +1,49 @@
+Folder PATH listing for volume Windows
+Volume serial number is 78AF-3838
+C:.
+|   .gitignore
+|   project-structure.txt
+|   pyproject.toml
+|   README.md
+|   setup.py
+|   
++---.dbx
+|       project.json
+|       
++---.github
+|   \---workflows
+|           copy-to-workspace.yml
+|           dbx-deploy.yml
+|           
++---conf
+|   |   deployment copy.yml_bkup
+|   |   deployment.yml
+|   |   
+|   \---tasks
+|           sample_etl_config.yml
+|           sample_ml_config.yml
+|           
++---notebooks
+|       sample_notebook.py
+|       
++---src
+|   \---jobs
+|       \---factory_hourly_refresh
+|               factory_hourly_refresh.py
+|               
+\---tests
+    |   entrypoint.py
+    |   
+    +---integration
+    |       e2e_test.py
+    |       
+    +---unit
+    |   |   conftest.py
+    |   |   sample_test.py
+    |   |   
+    |   \---__pycache__
+    |           conftest.cpython-311.pyc
+    |           
+    \---__pycache__
+            entrypoint.cpython-311.pyc
+            
