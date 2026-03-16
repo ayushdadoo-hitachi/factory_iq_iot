@@ -37,3 +37,7 @@ mlruns/
 # Environment variables
 .env
 .env*
+
+# Do NOT upload local rough work folder
+factoryiq_src/rough/
+
