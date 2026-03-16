@@ -1,4 +1,4 @@
-name: Copy code to Databricks Workspace
+name: Sync code to Databricks Workspace (factoryiq)
 
 on:
   push:
@@ -8,29 +8,32 @@ on:
 jobs:
   copy:
     runs-on: ubuntu-latest
+
     env:
-      # What to upload (change to '.' or 'src/jobs' if you prefer)
-      LOCAL_DIR: src
-      # Where in Workspace to put it (plain env var, not a secret)
-      WORKSPACE_PATH: /Users/ayush.dadoo.ext@hitachirail.net/factory_iq_iot
+      LOCAL_DIR: factoryiq_src
+      WORKSPACE_PATH: /Users/ayush.dadoo.ext@hitachirail.net/hrl_factoryiq
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
 
     steps:
+      # 1) Checkout Code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2) Setup Python
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # 3) Install Databricks Legacy CLI
       - name: Install Databricks CLI (legacy)
         run: |
           python -m pip install --upgrade pip
           pip install "databricks-cli<0.18"
 
-      - name: Configure Databricks CLI profile (from existing secrets)
+      # 4) Configure CLI
+      - name: Configure Databricks CLI profile
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
@@ -38,16 +41,24 @@ jobs:
           printf "[DEFAULT]\nhost = %s\ntoken = %s\n" "$DATABRICKS_HOST" "$DATABRICKS_TOKEN" > ~/.databrickscfg
           chmod 600 ~/.databrickscfg
 
-      - name: Ensure target folder exists in Workspace
+      # 5) Clean old workspace path (FULL WIPE — SAFE)
+      - name: Delete old workspace folder (idempotent)
+        run: |
+          # If old folder exists, delete it. --recursive ensures full cleanup.
+          databricks workspace rm -r "$WORKSPACE_PATH" || true
+
+      # 6) Recreate clean workspace path
+      - name: Recreate clean folder
         run: |
           databricks workspace mkdirs "$WORKSPACE_PATH"
 
-      - name: Upload source tree to Workspace
+      # 7) Upload entire source tree exactly as present locally
+      - name: Upload updated source tree
         run: |
-          # Note: --format/--language are NOT supported on import_dir in CLI v0.17.x
           databricks workspace import_dir --overwrite "$LOCAL_DIR" "$WORKSPACE_PATH"
 
-      - name: List uploaded path (verify)
+      # 8) Verify structure
+      - name: Verify upload
         run: |
-          echo "Contents of $WORKSPACE_PATH:"
+          echo "Final workspace structure:"
           databricks workspace list "$WORKSPACE_PATH" || true
