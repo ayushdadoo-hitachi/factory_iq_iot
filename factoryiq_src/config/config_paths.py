@@ -35,10 +35,12 @@ class ConfigPaths:
         # ------------------------------------------
         # Resolve ACCOUNT from secret store
         # ------------------------------------------
-        self.ACCOUNT = self.dbutils.secrets.get(
-            self.cfg["ACCOUNT_SECRET_SCOPE"],
-            self.cfg["ACCOUNT_SECRET_KEY"]
-        )
+        # self.ACCOUNT = self.dbutils.secrets.get(
+        #     self.cfg["ACCOUNT_SECRET_SCOPE"],
+        #     self.cfg["ACCOUNT_SECRET_KEY"]
+        # )
+
+        self.ACCOUNT = self.dbutils.secrets.get(scope="kv-scope", key="ACCOUNT")
 
         # ------------------------
         # Basic identity constants
