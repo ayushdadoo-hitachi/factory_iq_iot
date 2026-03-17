@@ -1,65 +1,134 @@
+"""
+config_paths.py
+----------------
+Loads static config.yml and constructs all ABFSS paths.
+
+Usage everywhere:
+    from config_paths import config_path
+    df = spark.read.csv(config_path.input_csv_path)
+"""
+
+import yaml
+import os
+from pyspark.dbutils import DBUtils
+from pyspark.sql import SparkSession
 
 
+class ConfigPaths:
+    """Loads static config and constructs all required ABFSS paths."""
 
-CSV_ACCOUNT     = "sarawrobotcsvfiles"
-CSV_CONTAINER   = "csv-files-from-welding-robot"
+    def __init__(self, config_file="config.yml"):
+        spark = SparkSession.builder.getOrCreate()
+        self.dbutils = DBUtils(spark)
 
-# ACCOUNT     = "stfactoryiqdevadls"
-ACCOUNT       = dbutils.secrets.get("factoryiq-secrets", "ACCOUNT")
+        # -----------------------
+        # Load YAML configuration
+        # -----------------------
+        config_path = self._resolve_config_path(config_file)
+        with open(config_path, "r") as f:
+            self.cfg = yaml.safe_load(f)
 
-CONTAINER   = "welding-data"
+        # --------------------------------------
+        # Resolve ACCOUNT from secret store
+        # --------------------------------------
+        self.ACCOUNT = self.dbutils.secrets.get(
+            self.cfg["ACCOUNT_SECRET_SCOPE"],
+            self.cfg["ACCOUNT_SECRET_KEY"]
+        )
 
-TABLE_ROOT  = "lake"   
+        # ------------------------
+        # Basic identity constants
+        # ------------------------
+        self.CSV_ACCOUNT = self.cfg["CSV_ACCOUNT"]
+        self.CSV_CONTAINER = self.cfg["CSV_CONTAINER"]
+        self.CONTAINER = self.cfg["CONTAINER"]
+        self.TABLE_ROOT = self.cfg["TABLE_ROOT"]
+        self.ROBOT_ID = self.cfg["ROBOT_ID"]
 
-ROBOT_ID    = "igm6_29fjan_4feb"
-# ROBOT_ID = "april_igm2"
+        # ------------------------
+        # Build the base ABFSS URLs
+        # ------------------------
+        self.csv_base = (
+            f"abfss://{self.CSV_CONTAINER}@{self.CSV_ACCOUNT}.dfs.core.windows.net"
+        )
 
-# ======================
-# Global / run controls
-# ======================
-VERBOSITY = 1  # 1=INFO, 2=DEBUG, 3=TRACE (if you support it)
+        self.base = (
+            f"abfss://{self.CONTAINER}@{self.ACCOUNT}.dfs.core.windows.net"
+        )
 
-# base = f"abfss://{CONTAINER}@{ACCOUNT}.dfs.core.windows.net/{ROBOT_ID}/robot_data"
-csvbase = f"abfss://{CSV_CONTAINER}@{CSV_ACCOUNT}.dfs.core.windows.net"
+        # ------------------------
+        # Final resolved paths (same names as your existing code)
+        # ------------------------
+        self.input_csv_path = f"{self.csv_base}/{self.ROBOT_ID}.csv"
 
-base = f"abfss://{CONTAINER}@{ACCOUNT}.dfs.core.windows.net"
+        self.inflow_dir = f"{self.base}/inflow/"
+        self.splitfiles_dir = f"{self.base}/inflow/"
+        self.archive_dir = f"{self.base}/archive/"
+        self.outputs_dir = f"{self.csv_base}/output_files/"
 
-input_csv_path  = f"{csvbase}/{ROBOT_ID}.csv" # robot csv file path
+        self.tables_root = f"{self.base}/{self.TABLE_ROOT}"
 
-inflow_dir    = f"{base}/inflow/"              # kept intact by this purge
-# splitfiles_dir    = f"{base}/splitfiles/"              # kept intact by this purge
-splitfiles_dir    = f"{base}/inflow/"              # kept intact by this purge
-archive_dir   = f"{base}/archive/"             # will be deleted entirely
-outputs_dir   = f"{csvbase}/output_files/"        # will be deleted entirely
-tables_root   = f"{base}/{TABLE_ROOT}"        # parent of bronze/silver/manifest etc.
+        # Bronze / Silver / Gold
+        self.bronze_path = f"{self.tables_root}/bronze"
+        self.silver_path = f"{self.tables_root}/silver"
+        self.gold_path = f"{self.tables_root}/gold"
 
-bronze_path = f"{tables_root}/bronze" # processed data path - bronze layer
-silver_path = f"{tables_root}/silver" # processed data path - silver layer
-gold_path = f"{tables_root}/gold" # processed data path - gold layer
+        # Gold-level outputs
+        self.gold_wirefeed_path = f"{self.tables_root}/gold_wire_consumption"
+        self.gold_wirefeed_episodes_path = (
+            f"{self.tables_root}/gold_wire_consumption_episodes"
+        )
+        self.joint_detection_path = f"{self.tables_root}/joint_detection"
 
-# Choose output locations for the enriched rows and episodes
-gold_wirefeed_path     = f"{tables_root}/gold_wire_consumption" # processed gold data with wire consumption fields
-gold_wirefeed_episodes_path = f"{tables_root}/gold_wire_consumption_episodes" # processed wire episodes data
+        # Images
+        self.temp_path_images = self.cfg["TEMP_PATH_IMAGES"]
+        self.dest_images = f"{self.tables_root}/weld_images"
 
-joint_detection_path     = f"{tables_root}/joint_detection" # processed gold data with wire consumption fields
+        # Reference paths
+        ref_base_csv = (
+            f"abfss://{self.CSV_CONTAINER}@{self.CSV_ACCOUNT}.dfs.core.windows.net"
+        )
+        ref_base = (
+            f"abfss://{self.CONTAINER}@{self.ACCOUNT}.dfs.core.windows.net"
+        )
 
-# image_output_basepath = f"{tables_root}/weld_images" # path for weld images
-temp_path_images = "/Volumes/factoryiq_iot/weld_images/images"
-dest_images = f"{tables_root}/weld_images" # processed data path - gold layer
+        self.joint_colors_excel_path = f"{ref_base_csv}/{self.cfg['JOINT_COLORS_EXCEL']}"
+        self.wps_excel_path = f"{ref_base_csv}/{self.cfg['WPS_EXCEL']}"
+        self.weld_features_excel_path = f"{ref_base_csv}/{self.cfg['WELD_FEATURES_EXCEL']}"
 
-ref_path_csv_excel = f"abfss://{CSV_CONTAINER}@{CSV_ACCOUNT}.dfs.core.windows.net"
-ref_path = f"abfss://{CONTAINER}@{ACCOUNT}.dfs.core.windows.net"
+        self.joint_colors_path = f"{ref_base}/{self.cfg['JOINT_COLORS_TABLE']}"
+        self.wps_path = f"{ref_base}/{self.cfg['WPS_TABLE']}"
+        self.weld_features_path = f"{ref_base}/{self.cfg['WELD_FEATURES_TABLE']}"
 
-joint_colors_excel_path = f"{ref_path_csv_excel}/ref_csv_excel/joint_colors.xlsx"
-wps_excel_path = f"{ref_path_csv_excel}/ref_csv_excel/wps_order_v5_actual.xlsx"
-required_weld_features_csv_path = f"{ref_path_csv_excel}/ref_csv_excel/weld_features_raw.csv"
+        # Feature columns
+        self.techdevisrunning = self.cfg["TECHDEV_IS_RUNNING"]
+        self.tps500current = self.cfg["TPS500_CURRENT"]
+        self.time_col = self.cfg["TIME_COL"]
+        self.wfs_col = self.cfg["WFS_COL"]
+        self.activetask_col = self.cfg["ACTIVETASK_COL"]
 
-joint_colors_path = f"{ref_path}/ref_tables/joint_colors_table"
-wps_path = f"{ref_path}/ref_tables/wps_reference_table"
-weld_features_path = f"{ref_path}/ref_tables/welddata_reference_table"
+        # Logging control
+        self.VERBOSITY = self.cfg["VERBOSITY"]
 
-techdevisrunning = "arcseam_isactive"
-tps500current   = "tps500i_current"
-time_col = "time"
-wfs_col = "tps500i_wire_speed"
-activetask_col = "d_activetask_f"
+    @staticmethod
+    def _resolve_config_path(config_file):
+        """
+        Look for config.yml in:
+            - local directory
+            - /Workspace/... (Databricks)
+        """
+        if os.path.exists(config_file):
+            return config_file
+
+        dbx_path = f"/Workspace/{config_file}"
+        if os.path.exists(dbx_path):
+            return dbx_path
+
+        raise FileNotFoundError(f"Config file not found: {config_file}")
+
+
+# ------------------------------
+# Singleton instance named EXACTLY
+# as your existing usage requires:
+# ------------------------------
+config_path = ConfigPaths()

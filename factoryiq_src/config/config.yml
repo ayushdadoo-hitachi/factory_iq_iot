@@ -1,0 +1,52 @@
+# ======================
+# Storage Accounts
+# ======================
+CSV_ACCOUNT: "sarawrobotcsvfiles"
+CSV_CONTAINER: "csv-files-from-welding-robot"
+
+# Commented so you know original value
+# ACCOUNT: "stfactoryiqdevadls"
+ACCOUNT_SECRET_SCOPE: "factoryiq-secrets"
+ACCOUNT_SECRET_KEY: "ACCOUNT"
+
+CONTAINER: "welding-data"
+TABLE_ROOT: "lake"
+
+# ======================
+# Robot Config
+# ======================
+ROBOT_ID: "igm6_29fjan_4feb"
+# ROBOT_ID_ALT: "april_igm2"
+
+# ======================
+# Global Controls
+# ======================
+VERBOSITY: 1
+
+# ======================
+# Image Paths (constant roots)
+# ======================
+TEMP_PATH_IMAGES: "/Volumes/factoryiq_iot/weld_images/images"
+
+# ======================
+# Reference CSV / Excel
+# ======================
+JOINT_COLORS_EXCEL: "ref_csv_excel/joint_colors.xlsx"
+WPS_EXCEL: "ref_csv_excel/wps_order_v5_actual.xlsx"
+WELD_FEATURES_EXCEL: "ref_csv_excel/weld_features_raw.csv"
+
+# ======================
+# Reference Tables
+# ======================
+JOINT_COLORS_TABLE: "ref_tables/joint_colors_table"
+WPS_TABLE: "ref_tables/wps_reference_table"
+WELD_FEATURES_TABLE: "ref_tables/welddata_reference_table"
+
+# ======================
+# Feature Column Names
+# ======================
+TECHDEV_IS_RUNNING: "arcseam_isactive"
+TPS500_CURRENT: "tps500i_current"
+TIME_COL: "time"
+WFS_COL: "tps500i_wire_speed"
+ACTIVETASK_COL: "d_activetask_f"
