@@ -6,7 +6,7 @@
   "CONTAINER": "welding-data",
   "TABLE_ROOT": "lake",
   "ROBOT_ID": "igm6_29fjan_4feb",
-  "VERBOSITY": 1,
+  "VERBOSITY": 2,
   "TEMP_PATH_IMAGES": "/Volumes/factoryiq_iot/weld_images/images",
   "JOINT_COLORS_EXCEL": "ref_data/joint_colors.xlsx",
   "WPS_EXCEL": "ref_data/wps_order_v5_actual.xlsx",
