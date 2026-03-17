@@ -57,10 +57,6 @@ jobs:
         run: |
           databricks workspace import_dir --overwrite "$LOCAL_DIR" "$WORKSPACE_PATH"
 
-      - name: Upload config.yml explicitly
-        run: |
-          databricks workspace import --overwrite factoryiq_src/config/config.yml "$WORKSPACE_PATH/config/config.yml"
-
       # 8) Verify structure
       - name: Verify upload
         run: |

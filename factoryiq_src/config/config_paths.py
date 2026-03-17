@@ -1,35 +1,36 @@
 """
 config_paths.py
 ----------------
-Loads static config.yml and constructs all ABFSS paths.
+Loads static config.json and constructs all ABFSS paths.
 
 Usage everywhere:
     from config_paths import config_path
     df = spark.read.csv(config_path.input_csv_path)
 """
 
-import yaml
+import json
 import os
 from pyspark.dbutils import DBUtils
 from pyspark.sql import SparkSession
 
 
 class ConfigPaths:
-    """Loads static config and constructs all required ABFSS paths."""
+    """Loads static JSON config and constructs all required ABFSS paths."""
 
-    def __init__(self, config_file="config.yml"):
+    def __init__(self, config_file="config.json"):
         spark = SparkSession.builder.getOrCreate()
         self.dbutils = DBUtils(spark)
 
         # -----------------------
-        # Load YAML configuration
+        # Load JSON configuration
         # -----------------------
         config_path = self._resolve_config_path(config_file)
+
         with open(config_path, "r") as f:
-            self.cfg = yaml.safe_load(f)
+            self.cfg = json.load(f)
 
         # --------------------------------------
-        # Resolve ACCOUNT from secret store
+        # Resolve ACCOUNT from Databricks secrets
         # --------------------------------------
         self.ACCOUNT = self.dbutils.secrets.get(
             self.cfg["ACCOUNT_SECRET_SCOPE"],
@@ -46,7 +47,7 @@ class ConfigPaths:
         self.ROBOT_ID = self.cfg["ROBOT_ID"]
 
         # ------------------------
-        # Build the base ABFSS URLs
+        # Base ABFSS URLs
         # ------------------------
         self.csv_base = (
             f"abfss://{self.CSV_CONTAINER}@{self.CSV_ACCOUNT}.dfs.core.windows.net"
@@ -57,7 +58,7 @@ class ConfigPaths:
         )
 
         # ------------------------
-        # Final resolved paths (same names as your existing code)
+        # Final resolved pipeline paths
         # ------------------------
         self.input_csv_path = f"{self.csv_base}/{self.ROBOT_ID}.csv"
 
@@ -80,11 +81,15 @@ class ConfigPaths:
         )
         self.joint_detection_path = f"{self.tables_root}/joint_detection"
 
-        # Images
+        # ------------------------
+        # Image paths
+        # ------------------------
         self.temp_path_images = self.cfg["TEMP_PATH_IMAGES"]
         self.dest_images = f"{self.tables_root}/weld_images"
 
+        # ------------------------
         # Reference paths
+        # ------------------------
         ref_base_csv = (
             f"abfss://{self.CSV_CONTAINER}@{self.CSV_ACCOUNT}.dfs.core.windows.net"
         )
@@ -100,21 +105,28 @@ class ConfigPaths:
         self.wps_path = f"{ref_base}/{self.cfg['WPS_TABLE']}"
         self.weld_features_path = f"{ref_base}/{self.cfg['WELD_FEATURES_TABLE']}"
 
+        # ------------------------
         # Feature columns
+        # ------------------------
         self.techdevisrunning = self.cfg["TECHDEV_IS_RUNNING"]
         self.tps500current = self.cfg["TPS500_CURRENT"]
         self.time_col = self.cfg["TIME_COL"]
         self.wfs_col = self.cfg["WFS_COL"]
         self.activetask_col = self.cfg["ACTIVETASK_COL"]
 
+        # ------------------------
         # Logging control
+        # ------------------------
         self.VERBOSITY = self.cfg["VERBOSITY"]
 
+    # --------------------------------------------------------
+    # Supports running locally and in Databricks workspace
+    # --------------------------------------------------------
     @staticmethod
     def _resolve_config_path(config_file):
         """
-        Look for config.yml in:
-            - local directory
+        Search for config.json in:
+            - current directory
             - /Workspace/... (Databricks)
         """
         if os.path.exists(config_file):
@@ -124,11 +136,10 @@ class ConfigPaths:
         if os.path.exists(dbx_path):
             return dbx_path
 
-        raise FileNotFoundError(f"Config file not found: {config_file}")
+        raise FileNotFoundError(f"Config JSON file not found: {config_file}")
 
 
 # ------------------------------
-# Singleton instance named EXACTLY
-# as your existing usage requires:
+# Single global instance
 # ------------------------------
 config_path = ConfigPaths()
